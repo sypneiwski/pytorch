@@ -554,6 +554,18 @@ void Reducer::delay_all_reduce() {
     }
   }
 
+  if (ddp_debug_level_ == c10d::DebugLevel::Info || ddp_debug_level_ == c10d::DebugLevel::Detail) {
+    for (const auto& unused_index: unused_parameters_) {
+      auto param_name = param_names_.find(unused_index);
+      TORCH_INTERNAL_ASSERT(
+        param_name != param_names_.end(),
+        "Expected to find parameter name from unused parameters map in debug mode.");
+      LOG(INFO) << "[Rank " << process_group_->getRank() << "]: "
+                  << "Parameter " << param_name->second << " at index " << unused_index
+                  << " is unused.";
+    }
+  }
+
   // launch all reduces for all buckets
   for (auto& bucket : buckets_) {
     all_reduce_bucket(bucket);
