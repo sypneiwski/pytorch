@@ -554,15 +554,20 @@ void Reducer::delay_all_reduce() {
     }
   }
 
-  if (ddp_debug_level_ == c10d::DebugLevel::Info || ddp_debug_level_ == c10d::DebugLevel::Detail) {
-    for (const auto& unused_index: unused_parameters_) {
+  // To avoid confusion around why static graph is picking up
+  // some parameters as unused on a rank vs not, we log
+  // unused parameter names for each rank for better
+  // debugability
+  if (ddp_debug_level_ == c10d::DebugLevel::Info ||
+      ddp_debug_level_ == c10d::DebugLevel::Detail) {
+    for (const auto& unused_index : unused_parameters_) {
       auto param_name = param_names_.find(unused_index);
       TORCH_INTERNAL_ASSERT(
-        param_name != param_names_.end(),
-        "Expected to find parameter name from unused parameters map in debug mode.");
+          param_name != param_names_.end(),
+          "Expected to find parameter name from unused parameters map in debug mode.");
       LOG(INFO) << "[Rank " << process_group_->getRank() << "]: "
-                  << "Parameter " << param_name->second << " at index " << unused_index
-                  << " is unused.";
+                << "Parameter " << param_name->second << " at index "
+                << unused_index << " is unused.";
     }
   }
 
