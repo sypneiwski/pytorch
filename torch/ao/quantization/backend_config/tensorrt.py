@@ -1,4 +1,5 @@
 import torch
+from .backend_config import BackendConfig
 from .observation_type import ObservationType
 from ._common_operator_config_utils import (
     _get_binary_op_configs,
@@ -77,6 +78,16 @@ def get_tensorrt_backend_config_dict():
             *_get_share_qparams_op_configs(share_qparams_op_dtype_configs),
         ]
     }
+
+# TODO: actually rewrite the dicts into BackendConfig
+def get_tensorrt_backend_config():
+    """ Get the BackendConfig for tensorrt backend
+    NOTE: Current api will change in the future, it's just to unblock experimentation for
+    new backends, please don't use it right now.
+    TODO: add a README when it's more stable
+    """
+    return BackendConfig.from_dict(get_tensorrt_backend_config_dict())
+    
 
 __all__ = [
     "get_tensorrt_backend_config_dict",
