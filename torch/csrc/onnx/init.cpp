@@ -224,6 +224,11 @@ void initONNXBindings(PyObject* module) {
           },
           "Write `args` to the previously specified ONNX log stream.")
       .def(
+          "_jit_pass_onnx_assign_node_and_value_names",
+          ::torch::wrap_pybind_function(
+              ::torch::jit::onnx::AssignNodeAndValueNames),
+          "Assign informative names for nodes and values.")
+      .def(
           "_jit_onnx_create_full_scope_name",
           ::torch::wrap_pybind_function(
               ::torch::jit::onnx::ONNXScopeName::createFullScopeName),

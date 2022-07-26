@@ -168,9 +168,8 @@ void functionCallSubstitution(Block* block) {
 }
 
 WithCurrentScope ONNXGraphTopLevelScopeGuard(Graph& graph) {
-  WithCurrentScope current_scope_guard(graph, graph.current_scope());
   if (graph.inputs().size() == 0) {
-    return current_scope_guard;
+    return WithCurrentScope(graph, graph.current_scope());
   }
   if (auto top_module_type = graph.inputs().at(0)->type()->cast<ClassType>()) {
     auto scope_name = ::torch::jit::onnx::ONNXScopeName::createFullScopeName(
@@ -179,7 +178,7 @@ WithCurrentScope ONNXGraphTopLevelScopeGuard(Graph& graph) {
     auto scope = graph.current_scope()->push(Symbol::scope(scope_name));
     return WithCurrentScope(graph, scope);
   }
-  return current_scope_guard;
+  return WithCurrentScope(graph, graph.current_scope());
 }
 
 } // namespace
@@ -191,7 +190,7 @@ WithCurrentScope ONNXGraphTopLevelScopeGuard(Graph& graph) {
 // with the aten symbolic which can still be used by the ONNX converter.
 void ONNXFunctionCallSubstitution(Graph& graph) {
   GRAPH_DUMP("Before function call substitution calls: ", &graph);
-  auto top_level_scope_guard = ONNXGraphTopLevelScopeGuard(graph);
+  WithCurrentScope top_level_scope_guard = ONNXGraphTopLevelScopeGuard(graph);
   functionCallSubstitution(graph.block());
   GRAPH_DUMP("After function call substitution calls: ", &graph);
 }
