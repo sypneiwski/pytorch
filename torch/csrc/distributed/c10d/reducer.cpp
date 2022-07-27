@@ -2196,5 +2196,3 @@ void verify_params_across_processes(
 }
 
 } // namespace c10d
-       
-           
