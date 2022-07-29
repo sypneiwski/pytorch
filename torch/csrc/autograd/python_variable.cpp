@@ -41,6 +41,7 @@
 
 #include <ATen/ATen.h>
 
+#include <c10/core/impl/CUDATraceTLS.h>
 #include <c10/core/SymIntArrayRef.h>
 #include <structmember.h>
 #include <cstdint>
@@ -266,6 +267,17 @@ c10::Layout concrete_layout_fn(
 void concrete_trace_cuda_event_creation_fn(
     const c10::impl::PyInterpreter*,
     uintptr_t event);
+void concrete_trace_cuda_event_record_fn(
+    const c10::impl::PyInterpreter*,
+    uintptr_t event,
+    uintptr_t stream);
+void concrete_trace_cuda_event_wait_fn(
+    const c10::impl::PyInterpreter*,
+    uintptr_t event,
+    uintptr_t stream);
+
+template<const char*, typename... Ts>
+void concrete_trace_cuda(const c10::impl::PyInterpreter*, Ts...);
 
 class PyInterpreterHolder {
  public:
@@ -282,7 +294,9 @@ class PyInterpreterHolder {
             &concrete_sizes_fn,
             &concrete_sym_sizes_fn,
             &concrete_layout_fn,
-            &concrete_trace_cuda_event_creation_fn)) {}
+            &concrete_trace_cuda_event_creation_fn,
+            &concrete_trace_cuda<c10::impl::trace_cuda_event_record_fn_name>,
+            &concrete_trace_cuda<c10::impl::trace_cuda_event_wait_fn_name>)) {}
   // NB: intentionally leaks the memory
   ~PyInterpreterHolder() {
     impl_->disarm();
@@ -2472,6 +2486,35 @@ void concrete_trace_cuda_event_creation_fn(const c10::impl::PyInterpreter*, uint
   py::module mod = py::module::import("torch.utils._cuda_trace");
   py::object hook = mod.attr("_fire_callbacks_for_cuda_event_creation");
   hook(event);
+}
+
+void concrete_trace_cuda_event_record_fn(const c10::impl::PyInterpreter*, uintptr_t event, uintptr_t stream) {
+  pybind11::gil_scoped_acquire gil;
+  at::impl::MaybeSetTLSOnEntryGuard guard;
+
+  py::module mod = py::module::import("torch.utils._cuda_trace");
+  py::object hook = mod.attr("_fire_callbacks_for_cuda_event_record");
+  hook(event, stream);
+}
+
+void concrete_trace_cuda_event_wait_fn(const c10::impl::PyInterpreter*, uintptr_t event, uintptr_t stream) {
+  pybind11::gil_scoped_acquire gil;
+  at::impl::MaybeSetTLSOnEntryGuard guard;
+
+  py::module mod = py::module::import("torch.utils._cuda_trace");
+  py::object hook = mod.attr("_fire_callbacks_for_cuda_event_wait");
+  hook(event, stream);
+}
+
+// The above functions all have very similar behaviour and could be templated like so:
+template<const char* func_name, typename... Ts>
+void concrete_trace_cuda(const c10::impl::PyInterpreter*, Ts... args) {
+  pybind11::gil_scoped_acquire gil;
+  at::impl::MaybeSetTLSOnEntryGuard guard;
+
+  py::module mod = py::module::import("torch.utils._cuda_trace");
+  py::object hook = mod.attr(func_name);
+  hook(args...);
 }
 
 } // anonymous namespace
