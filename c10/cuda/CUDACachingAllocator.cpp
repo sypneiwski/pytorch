@@ -4,7 +4,7 @@
 #include <c10/cuda/CUDAException.h>
 #include <c10/cuda/CUDAFunctions.h>
 #include <c10/cuda/CUDAGuard.h>
-#include <c10/core/impl/CUDATraceTLS.h>
+#include <c10/core/impl/CUDATrace.h>
 #include <c10/util/UniqueVoidPtr.h>
 #include <c10/util/flat_hash_map.h>
 #include <c10/util/irange.h>
@@ -1615,8 +1615,8 @@ class THCCachingAllocator {
     Block* block = device_allocator[device]->malloc(device, size, stream);
     add_allocated_block(block);
     *devPtr = (void*)block->ptr;
-    const auto* interp = c10::impl::CUDATraceTLS::get_trace();
-    if (interp) {
+    const c10::impl::PyInterpreter* interp = c10::impl::CUDATrace::get_trace();
+    if (C10_UNLIKELY(interp)) {
       interp->trace_cuda_memory_allocation(
         reinterpret_cast<uintptr_t>(*devPtr)
       );
@@ -1631,8 +1631,8 @@ class THCCachingAllocator {
     if (!block) {
       TORCH_CHECK(false, "invalid device pointer: ", ptr);
     }
-    const auto* interp = c10::impl::CUDATraceTLS::get_trace();
-    if (interp) {
+    const c10::impl::PyInterpreter* interp = c10::impl::CUDATrace::get_trace();
+    if (C10_UNLIKELY(interp)) {
       interp->trace_cuda_memory_deallocation(
         reinterpret_cast<uintptr_t>(block->ptr)
       );
@@ -1716,8 +1716,8 @@ bool forceUncachedAllocator() {
 }
 
 static void uncached_delete(void* ptr) {
-  const auto* interp = c10::impl::CUDATraceTLS::get_trace();
-  if (interp) {
+  const c10::impl::PyInterpreter* interp = c10::impl::CUDATrace::get_trace();
+  if (C10_UNLIKELY(interp)) {
     interp->trace_cuda_memory_deallocation(
       reinterpret_cast<uintptr_t>(ptr)
     );
@@ -1742,8 +1742,8 @@ struct CudaCachingAllocator : public Allocator {
       // Deliberately don't use cudaMallocMaybeCapturing here, to force an error
       // if someone tries to use forceUncachedAllocator while capturing.
       C10_CUDA_CHECK(cudaMalloc(&r, size));
-      const auto* interp = c10::impl::CUDATraceTLS::get_trace();
-      if (interp) {
+      const c10::impl::PyInterpreter* interp = c10::impl::CUDATrace::get_trace();
+      if (C10_UNLIKELY(interp)) {
         interp->trace_cuda_memory_allocation(
           reinterpret_cast<uintptr_t>(r)
         );
