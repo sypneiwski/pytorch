@@ -1,6 +1,6 @@
 #include <ATen/NamedTensorUtils.h>
 #include <ATen/core/PythonFallbackKernel.h>
-#include <c10/core/impl/CUDATraceTLS.h>
+#include <c10/core/impl/CUDATrace.h>
 #include <c10/core/DeviceType.h>
 #include <c10/core/SafePyObject.h>
 #include <c10/util/DeadlockDetection.h>
@@ -265,6 +265,20 @@ c10::Layout concrete_layout_fn(
     const c10::TensorImpl* self);
 template<const char*, typename... Ts>
 void concrete_trace_cuda(const c10::impl::PyInterpreter*, Ts...);
+static constexpr char trace_cuda_event_creation_fn_name[] =
+  "CUDAEventCreationCallbacks";
+static constexpr char trace_cuda_event_deletion_fn_name[] =
+  "CUDAEventDeletionCallbacks";
+static constexpr char trace_cuda_event_record_fn_name[] =
+  "CUDAEventRecordCallbacks";
+static constexpr char trace_cuda_event_wait_fn_name[] =
+  "CUDAEventWaitCallbacks";
+static constexpr char trace_cuda_memory_allocation_fn_name[] =
+  "CUDAMemoryAllocationCallbacks";
+static constexpr char trace_cuda_memory_deallocation_fn_name[] =
+  "CUDAMemoryDeallocationCallbacks";
+static constexpr char trace_cuda_stream_creation_fn_name[] =
+  "CUDAStreamCreationCallbacks";
 
 class PyInterpreterHolder {
  public:
@@ -281,14 +295,14 @@ class PyInterpreterHolder {
             &concrete_sizes_fn,
             &concrete_sym_sizes_fn,
             &concrete_layout_fn,
-            new c10::impl::CUDATraceFunctionWrapper(
-              &concrete_trace_cuda<c10::impl::trace_cuda_event_creation_fn_name>,
-              &concrete_trace_cuda<c10::impl::trace_cuda_event_deletion_fn_name>,
-              &concrete_trace_cuda<c10::impl::trace_cuda_event_record_fn_name>,
-              &concrete_trace_cuda<c10::impl::trace_cuda_event_wait_fn_name>,
-              &concrete_trace_cuda<c10::impl::trace_cuda_memory_allocation_fn_name>,
-              &concrete_trace_cuda<c10::impl::trace_cuda_memory_deallocation_fn_name>,
-              &concrete_trace_cuda<c10::impl::trace_cuda_stream_allocation_fn_name>
+            c10::impl::CUDATraceFunctionWrapper(
+              &concrete_trace_cuda<trace_cuda_event_creation_fn_name>,
+              &concrete_trace_cuda<trace_cuda_event_deletion_fn_name>,
+              &concrete_trace_cuda<trace_cuda_event_record_fn_name>,
+              &concrete_trace_cuda<trace_cuda_event_wait_fn_name>,
+              &concrete_trace_cuda<trace_cuda_memory_allocation_fn_name>,
+              &concrete_trace_cuda<trace_cuda_memory_deallocation_fn_name>,
+              &concrete_trace_cuda<trace_cuda_stream_creation_fn_name>
             )
             )) {}
   // NB: intentionally leaks the memory
@@ -375,7 +389,7 @@ static PyObject* getPythonTensorClass(c10::Device d) {
 }
 
 void activateCUDATrace() {
-  c10::impl::CUDATraceTLS::set_trace(self_interpreter.get());
+  c10::impl::CUDATrace::set_trace(self_interpreter.get());
 }
 
 // TODO: Make this take Variable by const reference
@@ -2478,12 +2492,11 @@ void concrete_trace_cuda(const c10::impl::PyInterpreter*, Ts... args) {
   pybind11::gil_scoped_acquire gil;
   at::impl::MaybeSetTLSOnEntryGuard guard;
 
-  try {
+  if (Py_IsInitialized()) {
     py::module mod = py::module::import("torch.utils._cuda_trace");
     py::object hook = mod.attr(func_name).attr("fire_callbacks");
     hook(args...);
   }
-  catch (const py::error_already_set& e) {}
 }
 
 } // anonymous namespace
