@@ -8,11 +8,16 @@ namespace impl {
 
 std::atomic<const PyInterpreter*> CUDATrace::cudaTraceState;
 
+static bool haveState{false};
+
 void CUDATrace::set_trace(const PyInterpreter* trace) {
   static c10::once_flag flag;
   c10::call_once(
     flag,
-    [&](){ cudaTraceState.store(trace); }
+    [&](){ 
+      cudaTraceState.store(trace, std::memory_order_release);
+      haveState = true;
+    }
   );
 }
 
