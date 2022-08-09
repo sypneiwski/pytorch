@@ -5,21 +5,21 @@
 namespace c10 {
 namespace impl {
 
-template<typename... Ts>
-static void noop_trace_cuda_fn(const PyInterpreter*, Ts...) {
+template<typename Return, typename... Ts>
+static Return noop_interpreter_fn(const PyInterpreter*, Ts...) {
   TORCH_INTERNAL_ASSERT(
     0,
-    "attempted to call a cuda trace function after corresponding interpreter died");
+    "attempted to call a PyInterpreter function after corresponding interpreter died");
 }
 
 void CUDATraceFunctionWrapper::disarm() {
-  event_creation_fn_ = &noop_trace_cuda_fn;
-  event_deletion_fn_ = &noop_trace_cuda_fn;
-  event_record_fn_ = &noop_trace_cuda_fn;
-  event_wait_fn_ = &noop_trace_cuda_fn;
-  memory_allocation_fn_ = &noop_trace_cuda_fn;
-  memory_deallocation_fn_ = &noop_trace_cuda_fn;
-  stream_creation_fn_ = &noop_trace_cuda_fn;
+  event_creation_fn_ = &noop_interpreter_fn;
+  event_deletion_fn_ = &noop_interpreter_fn;
+  event_record_fn_ = &noop_interpreter_fn;
+  event_wait_fn_ = &noop_interpreter_fn;
+  memory_allocation_fn_ = &noop_interpreter_fn;
+  memory_deallocation_fn_ = &noop_interpreter_fn;
+  stream_creation_fn_ = &noop_interpreter_fn;
 }
 
 static std::string noop_name_fn(const PyInterpreter*) {
@@ -30,81 +30,18 @@ static void noop_decref_fn(const PyInterpreter*, PyObject*, bool) {
   // no-op
 }
 
-static c10::intrusive_ptr<TensorImpl> noop_detach_fn(
-    const PyInterpreter*,
-    const TensorImpl*) {
-  TORCH_INTERNAL_ASSERT(
-      0,
-      "attempted to detach (shallow_copy_and_detach) Tensor with nontrivial PyObject after corresponding interpreter died");
-}
-
-static void noop_dispatch_fn(
-    const PyInterpreter*,
-    const c10::OperatorHandle& op,
-    torch::jit::Stack* stack) {
-  TORCH_INTERNAL_ASSERT(
-      0,
-      "attempted to dispatch (__torch_dispatch__) an operator on Tensor with nontrivial PyObject after corresponding interpreter died");
-}
-
-static bool noop_is_contiguous_fn(const PyInterpreter*, const TensorImpl*) {
-  TORCH_INTERNAL_ASSERT(
-      0,
-      "attempted to call `is_contiguous` on Tensor with nontrivial PyObject after corresponding interpreter died");
-}
-
-static c10::Device noop_device_fn(const PyInterpreter*, const TensorImpl*) {
-  TORCH_INTERNAL_ASSERT(
-      0,
-      "attempted to call `device` on Tensor with nontrivial PyObject after corresponding interpreter died");
-}
-
-static int64_t noop_dim_fn(const PyInterpreter*, const TensorImpl*) {
-  TORCH_INTERNAL_ASSERT(
-      0,
-      "attempted to call `dim` on Tensor with nontrivial PyObject after corresponding interpreter died");
-}
-
-static c10::IntArrayRef noop_strides_fn(
-    const PyInterpreter*,
-    const TensorImpl*) {
-  TORCH_INTERNAL_ASSERT(
-      0,
-      "attempted to call `strides` on Tensor with nontrivial PyObject after corresponding interpreter died");
-}
-
-static c10::IntArrayRef noop_sizes_fn(const PyInterpreter*, const TensorImpl*) {
-  TORCH_INTERNAL_ASSERT(
-      0,
-      "attempted to call `sizes` on Tensor with nontrivial PyObject after corresponding interpreter died");
-}
-
-static c10::SymIntArrayRef noop_sym_sizes_fn(
-    const PyInterpreter*,
-    const TensorImpl*) {
-  TORCH_INTERNAL_ASSERT(
-      0,
-      "attempted to call `sym_sizes` on Tensor with nontrivial PyObject after corresponding interpreter died");
-}
-
-static c10::Layout noop_layout_fn(const PyInterpreter*, const TensorImpl*) {
-  TORCH_INTERNAL_ASSERT(
-      0,
-      "attempted to call `layout` on Tensor with nontrivial PyObject after corresponding interpreter died");
-}
-
 void PyInterpreter::disarm() noexcept {
   name_fn_ = &noop_name_fn;
   decref_fn_ = &noop_decref_fn;
-  detach_fn_ = &noop_detach_fn;
-  dispatch_fn_ = &noop_dispatch_fn;
-  is_contiguous_fn_ = &noop_is_contiguous_fn;
-  device_fn_ = &noop_device_fn;
-  dim_fn_ = &noop_dim_fn;
-  strides_fn_ = &noop_strides_fn;
-  sizes_fn_ = &noop_sizes_fn;
-  sym_sizes_fn_ = &noop_sym_sizes_fn;
-  layout_fn_ = &noop_layout_fn;
+  detach_fn_ = &noop_interpreter_fn;
+  dispatch_fn_ = &noop_interpreter_fn;
+  is_contiguous_fn_ = &noop_interpreter_fn;
+  device_fn_ = &noop_interpreter_fn;
+  dim_fn_ = &noop_interpreter_fn;
+  strides_fn_ = &noop_interpreter_fn;
+  sizes_fn_ = &noop_interpreter_fn;
+  sym_sizes_fn_ = &noop_interpreter_fn;
+  layout_fn_ = &noop_interpreter_fn;
   trace_cuda_functions.disarm();
 }
 
