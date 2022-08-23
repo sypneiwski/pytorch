@@ -299,7 +299,14 @@ class PyInterpreterHolder {
             &concrete_sym_sizes_fn,
             &concrete_layout_fn,
             &concrete_sym_numel_fn,
-            c10::impl::GPUTraceFunctionWrapper(
+            c10::impl::GPUTraceFunctionWrapper<
+              c10::impl::kEventCreation, 
+              c10::impl::kEventDeletion, 
+              c10::impl::kEventRecord, 
+              c10::impl::kEventWait, 
+              c10::impl::kMemoryAllocation, 
+              c10::impl::kMemoryDeallocation, 
+              c10::impl::kStreamCreation>(
                 &concrete_trace_cuda<trace_cuda_event_creation_fn_name>,
                 &concrete_trace_cuda<trace_cuda_event_deletion_fn_name>,
                 &concrete_trace_cuda<trace_cuda_event_record_fn_name>,

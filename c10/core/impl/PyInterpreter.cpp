@@ -12,16 +12,6 @@ static void noop_trace_gpu_fn(const PyInterpreter*, Ts...) {
       "attempted to call a GPU trace function after corresponding interpreter died");
 }
 
-void GPUTraceFunctionWrapper::disarm() {
-  event_creation_fn_ = &noop_trace_gpu_fn;
-  event_deletion_fn_ = &noop_trace_gpu_fn;
-  event_record_fn_ = &noop_trace_gpu_fn;
-  event_wait_fn_ = &noop_trace_gpu_fn;
-  memory_allocation_fn_ = &noop_trace_gpu_fn;
-  memory_deallocation_fn_ = &noop_trace_gpu_fn;
-  stream_creation_fn_ = &noop_trace_gpu_fn;
-}
-
 static std::string noop_name_fn(const PyInterpreter*) {
   return "<unloaded interpreter>";
 }
@@ -112,7 +102,21 @@ void PyInterpreter::disarm() noexcept {
   sym_sizes_fn_ = &noop_sym_sizes_fn;
   layout_fn_ = &noop_layout_fn;
   sym_numel_fn_ = &noop_sym_numel_fn;
-  trace_gpu_functions.disarm();
+  trace_gpu_functions = GPUTraceFunctionWrapper<
+        kEventCreation, 
+        kEventDeletion, 
+        kEventRecord, 
+        kEventWait, 
+        kMemoryAllocation, 
+        kMemoryDeallocation, 
+        kStreamCreation>(
+          &noop_trace_gpu_fn,
+          &noop_trace_gpu_fn,
+          &noop_trace_gpu_fn,
+          &noop_trace_gpu_fn,
+          &noop_trace_gpu_fn,
+          &noop_trace_gpu_fn,
+          &noop_trace_gpu_fn);
 }
 
 // Defined out-of-line because it needs access to the definition of TensorImpl.
